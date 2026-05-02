@@ -32,6 +32,8 @@ const env = cleanEnv(process.env, {
   DB_POOL_MAX: num({ default: 10 }),
   DB_IDLE_TIMEOUT_MS: num({ default: 10000 }),
   DB_CONNECTION_TIMEOUT_MS: num({ default: 5000 }),
+  JWT_SECRET: str({ default: "change-me-in-production" }),
+  JWT_EXPIRES_IN: str({ default: "1h" }),
 });
 
 module.exports = { env };

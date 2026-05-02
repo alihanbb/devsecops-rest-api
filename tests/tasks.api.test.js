@@ -53,6 +53,16 @@ jest.mock("../src/modules/tasks/task.service", () => ({
 const { app } = require("../src/app");
 
 describe("Tasks API", () => {
+  const loginAs = async (username, password) => {
+    const response = await request(app).post("/api/v1/auth/login").send({ username, password });
+    return response.body.data.accessToken;
+  };
+
+  const authHeaderFor = async (username, password) => {
+    const token = await loginAs(username, password);
+    return { Authorization: `Bearer ${token}` };
+  };
+
   afterEach(() => {
     tasks.clear();
   });
@@ -74,35 +84,73 @@ describe("Tasks API", () => {
   });
 
   test("CRUD flow for /api/v1/tasks", async () => {
+    const adminAuthHeader = await authHeaderFor("admin", "admin123");
     const createResponse = await request(app).post("/api/v1/tasks").send({
-      title: "Write pipeline",
-      description: "Add CI security gates",
-    });
+        title: "Write pipeline",
+        description: "Add CI security gates",
+      })
+      .set(adminAuthHeader);
 
     expect(createResponse.statusCode).toBe(201);
     expect(createResponse.body.data.title).toBe("Write pipeline");
     const taskId = createResponse.body.data.id;
 
-    const listResponse = await request(app).get("/api/v1/tasks");
+    const listResponse = await request(app).get("/api/v1/tasks").set(adminAuthHeader);
     expect(listResponse.statusCode).toBe(200);
     expect(listResponse.body.data).toHaveLength(1);
 
-    const updateResponse = await request(app).patch(`/api/v1/tasks/${taskId}`).send({
-      completed: true,
-    });
+    const updateResponse = await request(app)
+      .patch(`/api/v1/tasks/${taskId}`)
+      .send({
+        completed: true,
+      })
+      .set(adminAuthHeader);
     expect(updateResponse.statusCode).toBe(200);
     expect(updateResponse.body.data.completed).toBe(true);
 
-    const deleteResponse = await request(app).delete(`/api/v1/tasks/${taskId}`);
+    const deleteResponse = await request(app).delete(`/api/v1/tasks/${taskId}`).set(adminAuthHeader);
     expect(deleteResponse.statusCode).toBe(204);
   });
 
   test("Validation error returns 400", async () => {
-    const response = await request(app).post("/api/v1/tasks").send({
-      title: "",
-    });
+    const adminAuthHeader = await authHeaderFor("admin", "admin123");
+    const response = await request(app)
+      .post("/api/v1/tasks")
+      .send({
+        title: "",
+      })
+      .set(adminAuthHeader);
 
     expect(response.statusCode).toBe(400);
     expect(response.body.message).toBe("Validation failed");
+  });
+
+  test("POST /api/v1/auth/login returns JWT token bundle", async () => {
+    const response = await request(app).post("/api/v1/auth/login").send({
+      username: "admin",
+      password: "admin123",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.data.tokenType).toBe("Bearer");
+    expect(response.body.data.user.role).toBe("admin");
+    expect(typeof response.body.data.accessToken).toBe("string");
+  });
+
+  test("Protected routes reject unauthenticated access", async () => {
+    const response = await request(app).get("/api/v1/tasks");
+    expect(response.statusCode).toBe(401);
+  });
+
+  test("Reader role cannot mutate tasks", async () => {
+    const readerAuthHeader = await authHeaderFor("reader", "reader123");
+    const response = await request(app)
+      .post("/api/v1/tasks")
+      .send({
+        title: "Blocked write",
+      })
+      .set(readerAuthHeader);
+
+    expect(response.statusCode).toBe(403);
   });
 });

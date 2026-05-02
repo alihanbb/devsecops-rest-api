@@ -22,7 +22,40 @@ const openApiSpec = {
   },
   servers: [{ url: "/" }],
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
     schemas: {
+      AuthLoginPayload: {
+        type: "object",
+        properties: {
+          username: { type: "string", minLength: 3, maxLength: 50 },
+          password: { type: "string", minLength: 6, maxLength: 100 },
+        },
+        required: ["username", "password"],
+      },
+      AuthTokenResponse: {
+        type: "object",
+        properties: {
+          accessToken: { type: "string" },
+          tokenType: { type: "string", example: "Bearer" },
+          expiresIn: { type: "string", example: "1h" },
+          user: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              username: { type: "string" },
+              role: { type: "string", enum: ["admin", "reader"] },
+            },
+            required: ["id", "username", "role"],
+          },
+        },
+        required: ["accessToken", "tokenType", "expiresIn", "user"],
+      },
       Task: taskSchema,
       TaskCreatePayload: {
         type: "object",
@@ -107,10 +140,48 @@ const openApiSpec = {
         },
       },
     },
+    "/api/v1/auth/login": {
+      post: {
+        tags: ["auth"],
+        summary: "JWT token al",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AuthLoginPayload" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Basarili login",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { $ref: "#/components/schemas/AuthTokenResponse" },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: "Gecersiz kimlik bilgileri",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/v1/tasks": {
       get: {
         tags: ["tasks"],
         summary: "Task listesi",
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "Task listesi",
@@ -133,6 +204,7 @@ const openApiSpec = {
       post: {
         tags: ["tasks"],
         summary: "Task olustur",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -170,6 +242,7 @@ const openApiSpec = {
       get: {
         tags: ["tasks"],
         summary: "Task detayi",
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             in: "path",
@@ -205,6 +278,7 @@ const openApiSpec = {
       patch: {
         tags: ["tasks"],
         summary: "Task guncelle",
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             in: "path",
@@ -248,6 +322,7 @@ const openApiSpec = {
       delete: {
         tags: ["tasks"],
         summary: "Task sil",
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             in: "path",

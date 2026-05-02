@@ -19,11 +19,12 @@ Production-oriented, küçük ama gerçekçi bir REST API örneği. Proje; güve
 - `GET /metrics` - Prometheus formatında metric çıktısı.
 - `GET /docs` - Swagger UI.
 - `GET /docs/openapi.json` - OpenAPI spec çıktısı.
-- `GET /api/v1/tasks` - task listele.
-- `GET /api/v1/tasks/:id` - task detay.
-- `POST /api/v1/tasks` - task oluştur.
-- `PATCH /api/v1/tasks/:id` - task güncelle.
-- `DELETE /api/v1/tasks/:id` - task sil.
+- `POST /api/v1/auth/login` - JWT token al.
+- `GET /api/v1/tasks` - task listele (auth gerekli).
+- `GET /api/v1/tasks/:id` - task detay (auth gerekli).
+- `POST /api/v1/tasks` - task oluştur (`admin` rolü).
+- `PATCH /api/v1/tasks/:id` - task güncelle (`admin` rolü).
+- `DELETE /api/v1/tasks/:id` - task sil (`admin` rolü).
 
 ## Uygulama Dokumantasyonu
 
@@ -131,6 +132,14 @@ docker compose down
 ## Trust Proxy Note
 
 Load balancer/reverse proxy arkasında çalışırken `TRUST_PROXY=true` ayarlayın. Aksi durumda istemci IP tespiti ve rate-limit davranışı yanıltıcı olabilir.
+
+## JWT Auth ve Roller
+
+- Varsayılan test kullanıcıları:
+  - `admin` / `admin123` (`admin`)
+  - `reader` / `reader123` (`reader`)
+- Token üretimi `JWT_SECRET` ve `JWT_EXPIRES_IN` env değişkenleri ile kontrol edilir.
+- Production ortamında `JWT_SECRET` mutlaka güçlü bir gizli değer ile override edilmelidir.
 
 ## Required GitHub Secrets
 
