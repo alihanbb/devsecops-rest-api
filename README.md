@@ -33,6 +33,7 @@ Production-oriented, küçük ama gerçekçi bir REST API örneği. Proje; güve
 - [DB kurulumu ve migration akışı](docs/db-migrations.md)
 - [Test workflow](docs/testing-workflow.md)
 - [Swagger / OpenAPI kullanımı](docs/api-swagger.md)
+- [API SLO dashboard ve alertler](docs/api-slo-dashboards.md)
 - [CI/CD failure runbook](docs/ci-debugging.md)
 
 ## Local Development
