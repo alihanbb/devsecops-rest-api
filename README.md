@@ -66,10 +66,12 @@ docker compose ps
 ### 1) CI (`.github/workflows/ci.yml`)
 
 - Dependency install (`npm ci`)
+- `actions/cache` ile `~/.npm` cache restore/save
 - Lint gate (`npm run lint`)
 - Unit/integration tests + coverage (`npm run test:coverage`)
 - Build gate (`npm run build`)
-- Docker build smoke gate
+- Buildx + GHA cache ile Docker layer cache
+- Job summary içinde cache hit ve toplam runtime görünürlüğü
 
 ### 2) Security (`.github/workflows/security.yml`)
 

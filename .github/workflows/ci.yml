@@ -13,6 +13,13 @@ jobs:
   lint-test-build:
     runs-on: ubuntu-latest
     steps:
+      - name: Mark CI start
+        id: timing
+        shell: bash
+        run: |
+          echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "started_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -20,10 +27,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
+
+      - name: Restore npm cache
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Report npm cache status
+        run: echo "npm cache hit: ${{ steps.npm-cache.outputs.cache-hit }}"
 
       - name: Lint
         run: npm run lint
@@ -34,5 +52,28 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Build docker image
-        run: docker build -t devsecops-rest-api:ci .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build docker image with layer cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: devsecops-rest-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Publish CI timing summary
+        shell: bash
+        run: |
+          finished_epoch="$(date +%s)"
+          elapsed_seconds="$((finished_epoch - ${{ steps.timing.outputs.started_epoch }}))"
+          {
+            echo "## CI Runtime Summary"
+            echo "- Started (UTC): ${{ steps.timing.outputs.started_at }}"
+            echo "- Finished (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Duration (seconds): ${elapsed_seconds}"
+            echo "- npm cache hit: ${{ steps.npm-cache.outputs.cache-hit }}"
+          } >> "$GITHUB_STEP_SUMMARY"
