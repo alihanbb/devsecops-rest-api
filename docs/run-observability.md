@@ -16,6 +16,9 @@ docker compose ps
 - Prometheus: `http://localhost:9091`
 - PostgreSQL: `localhost:5432`
 
+Grafana, provisioning ile `API SLO Overview` dashboard'unu otomatik yukler.
+SLO panel ve alert detaylari icin: `docs/api-slo-dashboards.md`.
+
 ## Durdurma
 
 ```bash
