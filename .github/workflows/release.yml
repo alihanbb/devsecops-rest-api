@@ -1,0 +1,35 @@
+name: Release and Deploy Stub
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Docker image tag
+        required: true
+        default: latest
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish-stub:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t devsecops-rest-api:${{ github.event.inputs.image_tag }} .
+
+      - name: Deploy placeholder
+        run: echo "Add registry push and deployment steps with environment approvals."
+
+  production-gate-stub:
+    runs-on: ubuntu-latest
+    needs: build-and-publish-stub
+    environment:
+      name: production
+    steps:
+      - name: Manual approval gate reached
+        run: echo "Protected production environment gate passed."
