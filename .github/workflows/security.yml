@@ -46,7 +46,7 @@ jobs:
         run: docker build -t devsecops-rest-api:scan .
 
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -56,7 +56,7 @@ jobs:
           exit-code: "1"
 
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: devsecops-rest-api:scan
           severity: HIGH,CRITICAL
@@ -103,6 +103,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
         run: |
           if [ -z "${SONAR_TOKEN}" ] || [ -z "${SONAR_HOST_URL}" ]; then
             echo "run_scan=false" >> "$GITHUB_OUTPUT"
@@ -112,6 +113,17 @@ jobs:
 
           case "${SONAR_HOST_URL}" in
             http://*|https://*)
+              if [ "${SONAR_HOST_URL}" = "https://sonarcloud.io" ] && [ -z "${SONAR_ORGANIZATION}" ]; then
+                echo "SONAR_ORGANIZATION is required when SONAR_HOST_URL is https://sonarcloud.io"
+                exit 1
+              fi
+
+              if [ "${SONAR_HOST_URL}" = "https://sonarcloud.io" ]; then
+                echo "use_sonarcloud=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "use_sonarcloud=false" >> "$GITHUB_OUTPUT"
+              fi
+
               echo "run_scan=true" >> "$GITHUB_OUTPUT"
               ;;
             *)
@@ -127,8 +139,18 @@ jobs:
           exit 1
 
       - name: SonarQube scan
-        if: ${{ steps.sonar-prepare.outputs.run_scan == 'true' }}
+        if: ${{ steps.sonar-prepare.outputs.run_scan == 'true' && steps.sonar-prepare.outputs.use_sonarcloud != 'true' }}
         uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarCloud scan
+        if: ${{ steps.sonar-prepare.outputs.run_scan == 'true' && steps.sonar-prepare.outputs.use_sonarcloud == 'true' }}
+        uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}

@@ -150,6 +150,7 @@ Load balancer/reverse proxy arkasında çalışırken `TRUST_PROXY=true` ayarlay
 
 - `SONAR_TOKEN`
 - `SONAR_HOST_URL`
+- `SONAR_ORGANIZATION` (yalnizca SonarCloud kullanirken zorunlu)
 
 `GITHUB_TOKEN` GitHub Actions tarafından otomatik sağlanır.
 
