@@ -5,6 +5,8 @@ dotenv.config();
 
 const runtimeEnv = process.env.NODE_ENV || "development";
 const defaultLogLevel = runtimeEnv === "test" ? "silent" : "info";
+const insecureJwtSecret = "change-me-in-production";
+const insecureDbPassword = "postgres";
 
 const env = cleanEnv(process.env, {
   NODE_ENV: str({ choices: ["development", "test", "production"], default: "development" }),
@@ -27,13 +29,27 @@ const env = cleanEnv(process.env, {
   DB_PORT: port({ default: 5432 }),
   DB_NAME: str({ default: "devsecops" }),
   DB_USER: str({ default: "postgres" }),
-  DB_PASSWORD: str({ default: "postgres" }),
+  DB_PASSWORD: str({ default: insecureDbPassword }),
   DB_SSL: bool({ default: false }),
   DB_POOL_MAX: num({ default: 10 }),
   DB_IDLE_TIMEOUT_MS: num({ default: 10000 }),
   DB_CONNECTION_TIMEOUT_MS: num({ default: 5000 }),
-  JWT_SECRET: str({ default: "change-me-in-production" }),
+  JWT_SECRET: str({ default: insecureJwtSecret }),
   JWT_EXPIRES_IN: str({ default: "1h" }),
 });
+
+if (env.NODE_ENV === "production") {
+  if (env.JWT_SECRET === insecureJwtSecret) {
+    throw new Error("JWT_SECRET must be overridden in production.");
+  }
+
+  if (env.DB_PASSWORD === insecureDbPassword) {
+    throw new Error("DB_PASSWORD must be overridden in production.");
+  }
+
+  if (env.CORS_ORIGIN === "http://localhost:3000") {
+    throw new Error("CORS_ORIGIN must be explicitly configured in production.");
+  }
+}
 
 module.exports = { env };

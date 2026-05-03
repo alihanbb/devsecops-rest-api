@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, master, develop]
   pull_request:
-    branches: ["**"]
+    branches: [main, master, develop]
 
 permissions:
   contents: read
@@ -97,8 +97,42 @@ jobs:
       - name: Test with coverage for Sonar
         run: npm run test:coverage
 
-      - name: SonarQube scan
-        uses: SonarSource/sonarqube-scan-action@v4
+      - name: Prepare SonarQube configuration
+        id: sonar-prepare
+        shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          if [ -z "${SONAR_TOKEN}" ] || [ -z "${SONAR_HOST_URL}" ]; then
+            echo "run_scan=false" >> "$GITHUB_OUTPUT"
+            echo "SONAR_TOKEN or SONAR_HOST_URL is missing for this run."
+            exit 0
+          fi
+
+          case "${SONAR_HOST_URL}" in
+            http://*|https://*)
+              echo "run_scan=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "SONAR_HOST_URL must start with http:// or https://"
+              exit 1
+              ;;
+          esac
+
+      - name: Enforce SonarQube secrets on push
+        if: ${{ github.event_name == 'push' && steps.sonar-prepare.outputs.run_scan != 'true' }}
+        run: |
+          echo "SONAR_TOKEN and SONAR_HOST_URL are required for push events."
+          exit 1
+
+      - name: SonarQube scan
+        if: ${{ steps.sonar-prepare.outputs.run_scan == 'true' }}
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Skip SonarQube scan (missing secrets)
+        if: ${{ steps.sonar-prepare.outputs.run_scan != 'true' }}
+        run: echo "Skipping SonarQube scan because SONAR_TOKEN or SONAR_HOST_URL is not available in this context."

@@ -12,7 +12,7 @@
     "db:migrate": "node scripts/migrate.js",
     "lint": "eslint src tests *.js",
     "test": "jest --runInBand --ci",
-    "test:coverage": "jest --runInBand --ci --coverage",
+    "test:coverage": "jest --runInBand --ci --coverage --coverageReporters=text --coverageReporters=lcov --coverageReporters=json-summary",
     "build": "node -e \"console.log('Build completed for Node.js runtime app')\""
   },
   "keywords": [
