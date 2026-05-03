@@ -4,50 +4,41 @@ on:
   push:
     branches: [main, master, develop]
   pull_request:
-    branches: ["**"]
+    branches: [main, master, develop]
 
 permissions:
   contents: read
 
 jobs:
   lint-test-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
     runs-on: ubuntu-latest
     steps:
-      - name: Mark CI start
-        id: timing
-        shell: bash
-        run: |
-          echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-          echo "started_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
-
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-
-      - name: Restore npm cache
-        id: npm-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            npm-${{ runner.os }}-
+          node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Report npm cache status
-        run: echo "npm cache hit: ${{ steps.npm-cache.outputs.cache-hit }}"
 
       - name: Lint
         run: npm run lint
 
       - name: Unit and integration tests with coverage
         run: npm run test:coverage
+
+      - name: Enforce line coverage threshold
+        shell: bash
+        run: |
+          node -e "const fs=require('node:fs');const p='coverage/coverage-summary.json';if(!fs.existsSync(p)){throw new Error('coverage summary missing')}const summary=JSON.parse(fs.readFileSync(p,'utf8'));const linePct=summary.total.lines.pct;const threshold=80;if(linePct < threshold){throw new Error('Coverage threshold failed: '+linePct+'% < '+threshold+'%')}console.log('Coverage gate passed:',linePct+'%')"
 
       - name: Build application
         run: npm run build
@@ -60,20 +51,7 @@ jobs:
         with:
           context: .
           push: false
-          load: true
+          load: false
           tags: devsecops-rest-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Publish CI timing summary
-        shell: bash
-        run: |
-          finished_epoch="$(date +%s)"
-          elapsed_seconds="$((finished_epoch - ${{ steps.timing.outputs.started_epoch }}))"
-          {
-            echo "## CI Runtime Summary"
-            echo "- Started (UTC): ${{ steps.timing.outputs.started_at }}"
-            echo "- Finished (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "- Duration (seconds): ${elapsed_seconds}"
-            echo "- npm cache hit: ${{ steps.npm-cache.outputs.cache-hit }}"
-          } >> "$GITHUB_STEP_SUMMARY"

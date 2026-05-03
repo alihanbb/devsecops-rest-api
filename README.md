@@ -67,12 +67,12 @@ docker compose ps
 ### 1) CI (`.github/workflows/ci.yml`)
 
 - Dependency install (`npm ci`)
-- `actions/cache` ile `~/.npm` cache restore/save
+- Node.js matrix (`20`, `22`) ile uyumluluk kontrolü
 - Lint gate (`npm run lint`)
 - Unit/integration tests + coverage (`npm run test:coverage`)
+- Coverage threshold gate (`>=80` line coverage)
 - Build gate (`npm run build`)
 - Buildx + GHA cache ile Docker layer cache
-- Job summary içinde cache hit ve toplam runtime görünürlüğü
 
 ### 2) Security (`.github/workflows/security.yml`)
 
@@ -132,6 +132,8 @@ docker compose logs -f api
 docker compose down
 ```
 
+> Docker Compose ayarları geliştirme ortamı icindir. `postgres/postgres`, `admin/admin` ve Docker socket mount gibi değerler production icin uygun degildir.
+
 ## Trust Proxy Note
 
 Load balancer/reverse proxy arkasında çalışırken `TRUST_PROXY=true` ayarlayın. Aksi durumda istemci IP tespiti ve rate-limit davranışı yanıltıcı olabilir.
@@ -150,6 +152,16 @@ Load balancer/reverse proxy arkasında çalışırken `TRUST_PROXY=true` ayarlay
 - `SONAR_HOST_URL`
 
 `GITHUB_TOKEN` GitHub Actions tarafından otomatik sağlanır.
+
+`SONAR_HOST_URL` degeri mutlaka `http://` veya `https://` ile baslamalidir.
+
+## Staff Stabilization Notes
+
+- Production ortaminda uygulama, guvensiz varsayilan degerlerle acilmaz:
+  - `JWT_SECRET=change-me-in-production`
+  - `DB_PASSWORD=postgres`
+  - `CORS_ORIGIN=http://localhost:3000`
+- Bu fail-fast kurali sayesinde gizli degerler unutuldugunda deployment hemen durur.
 
 ### Fast Triage Checklist (GitHub Actions)
 
